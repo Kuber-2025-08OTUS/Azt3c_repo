@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  namespace: homework
+  labels:
+    app.kubernetes.io/name: MyApp
+spec:
+  initContainers:
+    - name: init-mycontainer
+      image: busybox:1.37
+      command:
+        - sh
+        - -c
+        - wget https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ -O /init/index.html
+      volumeMounts:
+        - name: homework-vol
+          mountPath: /init
+  containers:
+    - name: nginx
+      image: nginx:1.25
+      ports:
+        - containerPort: 8000
+      command:
+        - sh
+        - -c
+        - |
+          > /etc/nginx/nginx.conf
+          cat >> /etc/nginx/nginx.conf <<EOF
+          events {}
+          http {
+            server {
+              listen 8000;
+              server_name _;
+              location / {
+                root /homework;
+                index index.html;
+              }
+            }
+          }
+          EOF
+          nginx -g 'daemon off;'
+      volumeMounts:
+        - name: homework-vol
+          mountPath: /homework
+      lifecycle:
+        preStop:
+          exec:
+            command:
+              - sh
+              - -c
+              - rm -rf /homework/index.html
+  volumes:
+    - name: homework-vol
+      emptyDir: {}

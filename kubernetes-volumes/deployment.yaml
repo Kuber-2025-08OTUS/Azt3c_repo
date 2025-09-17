@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: homework
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      nodeSelector:
+        homework: "true"
+      initContainers:
+        - name: init-mycontainer
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - wget https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ -O /homework/index.html; mkdir -p /homework/conf
+          volumeMounts:
+            - name: homework-vol
+              mountPath: /homework
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 8000
+          command:
+            - sh
+            - -c
+            - |
+              cat > /etc/nginx/nginx.conf <<'EOF'
+              events {}
+              http {
+                server {
+                  listen 8000;
+                  server_name _;
+                  location / {
+                    root /homework;
+                    index index.html;
+                  }
+                }
+              }
+              EOF
+              nginx -g 'daemon off;'
+          volumeMounts:
+            - name: homework-vol
+              mountPath: /homework
+            - name: homework-config
+              mountPath: /homework/conf
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - rm -rf /homework/index.html
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: homework-vol
+          persistentVolumeClaim:
+            claimName: pv-claim
+        - name: homework-config
+          configMap:
+            name: app-config
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1

@@ -1,0 +1,23 @@
+kubectl delete namespace homework
+kubectl delete storageclass custom-class
+kubectl delete  clusterrole endpoints-reader
+kubectl delete  clusterrolebinding bind-cd-metrics
+kubectl delete  clusterrolebinding bind-monitoring-metrics
+--
+wget https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz
+Unpack it (tar -zxvf helm-v3.19.0-linux-amd64.tar.gz)
+Find the helm binary in the unpacked directory, and move it to its desired destination (mv linux-amd64/helm /usr/local/bin/helm)
+chmod +x /usr/local/bin/helm
+---
+wget https://github.com/helmfile/helmfile/releases/download/v1.1.7/helmfile_1.1.7_linux_amd64.tar.gz
+Unpack it (tar -zxvf helmfile_1.1.7_linux_amd64.tar.gz)
+Find the helmdile binary in the unpacked directory, and move it to its desired destination (mv helmfile /usr/local/bin/helmfile)
+
+helm repo add groundhog2k https://groundhog2k.github.io/helm-charts/
+helm repo update
+helm install nginx ./nginx --namespace homework --create-namespace
+---
+
+cd ../kafka
+helmfile init
+helmfile apply 

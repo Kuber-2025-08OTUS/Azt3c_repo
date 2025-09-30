@@ -1,0 +1,195 @@
+# Default values for nginx.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+
+replicaCount: 3
+
+createNamespace: false
+namespace: homework
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+init:
+  name: init-mycontainer
+  image: busybox
+  tag: "1.37"
+  command: wget https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ -O /homework/index.html; mkdir -p /homework/conf
+  volumeMounts:
+    - name: homework-vol
+      mountPath: /homework
+image:
+  repository: nginx  
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "1.25"
+
+container:
+  port: 8000
+  serverName: "_"
+  rootPath: /homework
+  lifecycle:
+      - sh
+      - -c
+      - rm -rf /homework/index.html
+
+persistence:
+  enabled: true
+  name: pv-claim
+  namespace: homework
+  storageClassName: custom-class
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+clusterRoleBindings:
+  - name: bind-cd-metrics
+    namespace: homework
+    roleName: admin
+    subjects:
+      - kind: ServiceAccount
+        name: cd
+        namespace: homework
+
+  - name: bind-monitoring-metrics
+    roleName: endpoints-reader
+    subjects:
+      - kind: ServiceAccount
+        name: monitoring
+        namespace: homework
+
+storageclass:
+  name: custom-class
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+  provisioner: k8s.io/minikube-hostpath
+  reclaimPolicy: Retain
+
+role-admin:
+  name: admin
+
+role-metrics:
+  name: endpoints-reader
+
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+configmap:
+  name: app-config
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount_cd:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "cd"
+
+serviceAccount_monitoring:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "monitoring"
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {app: nginx}
+
+
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  name: service-pod
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8000
+  targetPort: 8000
+
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  class: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  host: "homework.otus"
+  paths:
+    - path: /homepage(/|$)(.*)
+      pathType: ImplementationSpecific
+      serviceName: service-pod
+      servicePort: 8000
+    - path: /
+      pathType: Prefix
+      serviceName: service-pod
+      servicePort: 8000
+# -- Expose the service via gateway-api HTTPRoute
+# Requires Gateway API resources and suitable controller installed within the cluster
+# (see: https://gateway-api.sigs.k8s.io/guides/)
+httpRoute:
+  # HTTPRoute enabled.
+  enabled: false
+
+resources: {}
+livenessProbe: {}
+#  httpGet:
+#    path: /
+#    port: http
+readinessProbe:
+  httpGet:
+    path: /index.html
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Additional volumes on the output Deployment definition.
+volumes:
+  - name: homework-vol
+    persistentVolumeClaim:
+      claimName: pv-claim
+  - name: homework-config
+    configMap:
+      name: app-config
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: 
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+  - name: homework-vol
+    mountPath: /homework
+  - name: homework-config
+    mountPath: /homework/conf
+
+nodeSelector: {homework: "true"}
+
+tolerations: []
+
+affinity: {}

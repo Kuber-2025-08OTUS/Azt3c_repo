@@ -1,0 +1,54 @@
+releases:
+  - name: kafka
+    namespace: prod
+    chart: oci://registry-1.docker.io/bitnamicharts/kafka
+    version: "25.3.5"
+    values:
+      - replicaCount: 2
+      - image:
+          registry: public.ecr.aws
+          repository: bitnami/kafka
+          tag: "3.5.2"
+          pullPolicy: IfNotPresent
+      - auth:
+          clientProtocol: "SASL_PLAINTEXT"
+          interBrokerProtocol: "SASL_PLAINTEXT"
+      - kraft:
+          processRoles: "broker,controller"
+          controllerQuorumVoters: |
+            0@kafka-0.kafka-headless.prod.svc.cluster.local:9093,
+            1@kafka-1.kafka-headless.prod.svc.cluster.local:9093,
+            2@kafka-2.kafka-headless.prod.svc.cluster.local:9093,
+            3@kafka-3.kafka-headless.prod.svc.cluster.local:9093,
+            4@kafka-4.kafka-headless.prod.svc.cluster.local:9093
+          nodeId: 0
+          controllerListenerNames: "CONTROLLER"
+      - listeners:
+          PLAINTEXT:
+            name: PLAINTEXT
+            port: 9092
+            type: internal
+            tls: false
+          CONTROLLER:
+            name: CONTROLLER
+            port: 9093
+            type: internal
+            tls: false
+      - advertisedListeners:
+          PLAINTEXT: PLAINTEXT://kafka.prod.svc.cluster.local:9092
+      - persistence:
+          enabled: true
+          storageClass: "standard"
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+      - resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 2Gi
+      - extraEnvVars:
+          - name: KAFKA_ADVERTISED_LISTENERS
+            value: "{{ .Values.advertisedListeners.PLAIN }}"

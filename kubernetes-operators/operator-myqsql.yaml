@@ -1,0 +1,10 @@
+apiVersion: otus.homework/v1
+kind: MySQL
+metadata:
+  name: mysql-example
+  namespace: operator
+spec:
+  image: "mysql:lts"
+  database: "cordon"
+  password: "3e!9)(j01n7O"
+  storage_size: "1G"

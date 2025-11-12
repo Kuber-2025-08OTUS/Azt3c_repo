@@ -1,0 +1,14 @@
+{{- if .Values.serviceAccount_cd.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ index .Values "serviceAccount_cd" "name" }}
+  namespace: {{  .Values.namespace }}
+  labels:
+    {{- include "nginx.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount_cd.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ .Values.serviceAccount_cd.automount }}
+{{- end }}

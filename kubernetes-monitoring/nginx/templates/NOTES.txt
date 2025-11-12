@@ -1,0 +1,12 @@
+Welcome to your nginx Helm chart release!
+
+Your release has been installed successfully.
+
+You can access the nginx service at the following address:
+
+  http://{{ .Values.ingress.host }}/
+
+Ingress host: {{ .Values.ingress.host }}
+Service port: {{ .Values.service.port }}
+
+Note: Make sure your DNS or /etc/hosts file is configured to resolve "{{ .Values.ingress.host }}" to your Kubernetes cluster ingress IP.

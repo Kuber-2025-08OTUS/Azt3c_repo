@@ -1,0 +1,15 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageclass.name | quote }}
+  namespace: {{ .Values.namespace | quote }}
+  {{- with .Values.storageclass.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+provisioner: {{ .Values.storageclass.provisioner | quote }}
+reclaimPolicy: {{ .Values.storageclass.reclaimPolicy | quote }}
+{{- with .Values.storageclass.parameters }}
+parameters:
+  {{- toYaml . | nindent 2 }}
+{{- end }}

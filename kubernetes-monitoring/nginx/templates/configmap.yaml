@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{.Values.configmap.name}}
+    namespace: {{.Values.namespace}}
+data:
+  file: |
+    greeting=Hello from ConfigMap!
+    timestamp=$(date)
+  nginx.conf: |
+    daemon off;
+    worker_processes auto;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        default_type  application/octet-stream;
+
+        sendfile on;
+        keepalive_timeout 65;
+
+        server {
+            listen 8000;
+            server_name _;
+            
+            # Настройка кеша статики
+            gzip on;
+            gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xhtml+xml text/javascript application/vnd.ms-fontobject font/opentype application/x-font-ttf font/ttf font/otf image/svg+xml;
+        
+            location / {
+                root /monitoring;
+                index index.html index.htm;
+                
+                try_files $uri $uri/ =404;
+            }
+            location = /basic_status {
+                stub_status;
+            }
+
+          }
+    }

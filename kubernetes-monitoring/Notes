@@ -1,0 +1,20 @@
+ minikube docker-env
+ eval $(minikube -p minikube docker-env)
+ cd image_nginx && docker build . -t nginx:custom 
+cd .. && helm install nginx nginx/ 
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring
+helm install nginx-exporter prometheus-community/prometheus-nginx-exporter \
+  --set nginx.scrapeUri=http://nginx:8000/stub_status \
+  --namespace monitoring
+
+export POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/name=prometheus-nginx-exporter,app.kubernetes.io/instance=nginx-exporter" -o jsonpath="{.items[0].metadata.name}")
+export CONTAINER_PORT=$(kubectl get pod --namespace monitoring $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+kubectl --namespace monitoring port-forward $POD_NAME 8080:$CONTAINER_PORT
+
+на другом окне 
+curl -I http://monitoring.otus/
+curl localhost:8080/metrics | grep 200
+
